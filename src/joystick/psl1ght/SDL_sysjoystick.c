@@ -38,6 +38,7 @@
 
 typedef struct SDL_PSL1GHT_JoyData
 {
+    u8 status;
     char name[NAMESIZE];
 } SDL_PSL1GHT_JoyData;
 
@@ -50,6 +51,7 @@ static SDL_PSL1GHT_JoyData joy_data[MAX_PADS];
 static int numberOfJoysticks = 0;
 
 static void SDL_SYS_JoystickDetect(void);
+static SDL_JoystickID SDL_SYS_JoystickGetDeviceInstanceID(int device_index);
 
 /* Function to scan the system for joysticks.
  * This function should set numberOfJoysticks to the number of available
@@ -99,9 +101,17 @@ SDL_SYS_JoystickDetect(void)
         unsigned int i;
         numberOfJoysticks = padinfo.connected;
 
-        for (i = 0; i < padinfo.connected; i++) {
+        for (i = 0; i < padinfo.max; i++) {
+            if (padinfo.status[i] == joy_data[i].status) {
+                continue;
+            }
+            joy_data[i].status = padinfo.status[i];
+            SDL_JoystickID instanceID = SDL_SYS_JoystickGetDeviceInstanceID(i);
             if (padinfo.status[i]) {
                 sprintf(joy_data[i].name, "PAD%02X", i);
+                SDL_PrivateJoystickAdded(instanceID);
+            } else {
+                SDL_PrivateJoystickRemoved(instanceID);
             }
         }
     }
