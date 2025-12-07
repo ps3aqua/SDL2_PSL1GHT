@@ -2717,6 +2717,8 @@ dnl Check for PSL1GHT OpenGL
 CheckPSL1GHTGL()
 {
     if test x$enable_video = xyes -a x$enable_video_opengl = xyes; then
+        video_opengl_egl=yes
+        AC_DEFINE(SDL_VIDEO_OPENGL_EGL, 1, [ ])
         AC_DEFINE(SDL_VIDEO_OPENGL, 1, [ ])
         AC_DEFINE(SDL_VIDEO_RENDER_OGL, 1, [ ])
         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lEGL -lGL -lstdc++ -lm"
@@ -4516,7 +4518,7 @@ dnl BeOS support removed after SDL 2.0.1. Haiku still works.  --ryan.
         EXTRA_CFLAGS="$EXTRA_CFLAGS -I\"$PSL1GHT/ppu/include\" -mcpu=cell "
         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lgcm_sys -lrsx -lsysutil -lio -laudio -lrt -llv2"
         CheckPSL1GHTVideo
-        #CheckPSL1GHTGL
+        CheckPSL1GHTGL
 
         # Set up files for the thread library
         if test x$enable_threads = xyes; then

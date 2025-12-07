@@ -38,6 +38,7 @@
 #include "SDL_PSL1GHTevents_c.h"
 #include "SDL_PSL1GHTmodes_c.h"
 
+#include <EGL/egl.h>
 #include <malloc.h>
 #include <assert.h>
 
@@ -80,7 +81,9 @@ PSL1GHT_VideoInit(_THIS)
     initializeGPU(devdata);
     PSL1GHT_InitModes(_this);
 
+    #ifndef SDL_VIDEO_OPENGL
     gcmSetFlipMode(GCM_FLIP_VSYNC); // Wait for VSYNC to flip
+    #endif
 
     /* We're done! */
     return 0;
@@ -99,13 +102,17 @@ void
 initializeGPU(SDL_DeviceData *devdata)
 {
     deprintf (1, "initializeGPU()\n");
+    #ifndef SDL_VIDEO_OPENGL
     // Allocate a 1Mb buffer, alligned to a 1Mb boundary to be our shared IO memory with the RSX.
     void *host_addr = memalign(1024 * 1024, 1024 * 1024);
     assert(host_addr != NULL);
 
-    // Initilise Reality, which sets up the command buffer and shared IO memory
+    // Initialise Reality, which sets up the command buffer and shared IO memory
     rsxInit(&devdata->_CommandBuffer, 0x10000, 1024 * 1024, host_addr);
     assert(devdata->_CommandBuffer != NULL);
+    #else
+    eglInitialize(eglGetDisplay(EGL_DEFAULT_DISPLAY), NULL, NULL);
+    #endif
 }
 
 int
@@ -246,6 +253,17 @@ PSL1GHT_CreateDevice(void)
     device->ShowScreenKeyboard = PSL1GHT_ShowScreenKeyboard;
     device->HideScreenKeyboard = PSL1GHT_HideScreenKeyboard;
     device->IsScreenKeyboardShown = PSL1GHT_IsScreenKeyboardShown;
+    #ifdef SDL_VIDEO_OPENGL
+    device->GL_LoadLibrary = PSL1GHT_GL_LoadLibrary;
+    device->GL_GetProcAddress = PSL1GHT_GL_GetProcAddress;
+    device->GL_UnloadLibrary = PSL1GHT_GL_UnloadLibrary;
+    device->GL_CreateContext = PSL1GHT_GL_CreateContext;
+    device->GL_MakeCurrent = PSL1GHT_GL_MakeCurrent;
+    device->GL_SetSwapInterval = PSL1GHT_GL_SetSwapInterval;
+    device->GL_GetSwapInterval = PSL1GHT_GL_GetSwapInterval;
+    device->GL_SwapWindow = PSL1GHT_GL_SwapWindow;
+    device->GL_DeleteContext = PSL1GHT_GL_DeleteContext;
+    #endif
 
     device->PumpEvents = PSL1GHT_PumpEvents;
 

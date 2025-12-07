@@ -18,19 +18,24 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
-#include "../../SDL_internal.h"
 
-#ifdef SDL_VIDEO_DRIVER_PSP
+#include "SDL_PSL1GHTgl_c.h"
+#if defined(SDL_VIDEO_DRIVER_PSL1GHT) && defined(SDL_VIDEO_OPENGL)
+#include "../../SDL_internal.h"
 
 #include <stdlib.h>
 #include <string.h>
 
 #include "SDL_error.h"
-#include "SDL_pspvideo.h"
-#include "SDL_pspgl_c.h"
+#include "SDL_PSL1GHTvideo.h"
+#include <EGL/egl.h>
+#define GL3_PROTOTYPES
+#include <GL3/gl3.h>
+#include <GL3/rsxgl.h>
+#include <GL3/rsxgl3ext.h>
 
 /*****************************************************************************/
-/* SDL OpenGL/OpenGL ES functions                                            */
+/* SDL OpenGL functions                                            */
 /*****************************************************************************/
 #define EGLCHK(stmt)                           \
     do {                                       \
@@ -44,35 +49,33 @@
         }                                      \
     } while (0)
 
-int PSP_GL_LoadLibrary(_THIS, const char *path)
+int PSL1GHT_GL_LoadLibrary(_THIS, const char *path)
 {
     return 0;
 }
 
-/* pspgl doesn't provide this call, so stub it out since SDL requires it.
-#define GLSTUB(func,params) void func params {}
-
-GLSTUB(glOrtho,(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top,
-                    GLdouble zNear, GLdouble zFar))
-*/
-void *PSP_GL_GetProcAddress(_THIS, const char *proc)
+void *PSL1GHT_GL_GetProcAddress(_THIS, const char *proc)
 {
     return eglGetProcAddress(proc);
 }
 
-void PSP_GL_UnloadLibrary(_THIS)
+void PSL1GHT_GL_UnloadLibrary(_THIS)
 {
     eglTerminate(_this->gl_data->display);
 }
 
-static EGLint width = 480;
-static EGLint height = 272;
+//static EGLint width = 480;
+//static EGLint height = 272;
 
-SDL_GLContext PSP_GL_CreateContext(_THIS, SDL_Window *window)
+void tcp_puts(GLsizei n,const GLchar * s) 
 {
+    printf(s);
+    fflush(NULL);
+}
 
-    SDL_WindowData *wdata = (SDL_WindowData *)window->driverdata;
 
+SDL_GLContext PSL1GHT_GL_CreateContext(_THIS, SDL_Window *window)
+{
     EGLint attribs[32];
     EGLDisplay display;
     EGLContext context;
@@ -81,10 +84,10 @@ SDL_GLContext PSP_GL_CreateContext(_THIS, SDL_Window *window)
     EGLint num_configs;
     int i;
 
-    /* EGL init taken from glutCreateWindow() in PSPGL's glut.c. */
-    EGLCHK(display = eglGetDisplay(0));
+    /* EGL init taken from SDL2's PSP Video Driver and RSXGL Samples. */
+    glInitDebug(1024*256,tcp_puts);
+    EGLCHK(display = eglGetDisplay(EGL_DEFAULT_DISPLAY));
     EGLCHK(eglInitialize(display, NULL, NULL));
-    wdata->uses_gles = SDL_TRUE;
     window->flags |= SDL_WINDOW_FULLSCREEN;
 
     /* Setup the config based on SDL's current values. */
@@ -116,21 +119,26 @@ SDL_GLContext PSP_GL_CreateContext(_THIS, SDL_Window *window)
         return 0;
     }
 
-    EGLCHK(eglGetConfigAttrib(display, config, EGL_WIDTH, &width));
-    EGLCHK(eglGetConfigAttrib(display, config, EGL_HEIGHT, &height));
+    //EGLCHK(eglGetConfigAttrib(display, config, EGL_WIDTH, &width));
+    //EGLCHK(eglGetConfigAttrib(display, config, EGL_HEIGHT, &height));
 
-    EGLCHK(context = eglCreateContext(display, config, NULL, NULL));
-    EGLCHK(surface = eglCreateWindowSurface(display, config, 0, NULL));
+    EGLCHK(surface = eglCreateWindowSurface(display, config, 0, 0));
+    EGLCHK(context = eglCreateContext(display, config, 0, 0));
     EGLCHK(eglMakeCurrent(display, surface, surface, context));
-
+    _this->gl_data = (SDL_GLDriverData *)SDL_calloc(1, sizeof(SDL_GLDriverData));
     _this->gl_data->display = display;
     _this->gl_data->context = context;
     _this->gl_data->surface = surface;
 
+    // Set profile version properly, set to 3.2 cause 3.1 is normally not considered Core
+    _this->gl_config.major_version = 3;
+    _this->gl_config.minor_version = 2;
+    _this->gl_config.profile_mask = SDL_GL_CONTEXT_PROFILE_CORE;
+
     return context;
 }
 
-int PSP_GL_MakeCurrent(_THIS, SDL_Window *window, SDL_GLContext context)
+int PSL1GHT_GL_MakeCurrent(_THIS, SDL_Window *window, SDL_GLContext context)
 {
     if (!eglMakeCurrent(_this->gl_data->display, _this->gl_data->surface,
                         _this->gl_data->surface, _this->gl_data->context)) {
@@ -139,25 +147,17 @@ int PSP_GL_MakeCurrent(_THIS, SDL_Window *window, SDL_GLContext context)
     return 0;
 }
 
-int PSP_GL_SetSwapInterval(_THIS, int interval)
+int PSL1GHT_GL_SetSwapInterval(_THIS, int interval)
 {
-    EGLBoolean status;
-    status = eglSwapInterval(_this->gl_data->display, interval);
-    if (status == EGL_TRUE) {
-        /* Return success to upper level */
-        _this->gl_data->swapinterval = interval;
-        return 0;
-    }
-    /* Failed to set swap interval */
-    return SDL_SetError("Unable to set the EGL swap interval");
+    return 0;
 }
 
-int PSP_GL_GetSwapInterval(_THIS)
+int PSL1GHT_GL_GetSwapInterval(_THIS)
 {
     return _this->gl_data->swapinterval;
 }
 
-int PSP_GL_SwapWindow(_THIS, SDL_Window *window)
+int PSL1GHT_GL_SwapWindow(_THIS, SDL_Window *window)
 {
     if (!eglSwapBuffers(_this->gl_data->display, _this->gl_data->surface)) {
         return SDL_SetError("eglSwapBuffers() failed");
@@ -165,18 +165,23 @@ int PSP_GL_SwapWindow(_THIS, SDL_Window *window)
     return 0;
 }
 
-void PSP_GL_DeleteContext(_THIS, SDL_GLContext context)
+void PSL1GHT_GL_DeleteContext(_THIS, SDL_GLContext context)
 {
     SDL_VideoData *phdata = (SDL_VideoData *)_this->driverdata;
     EGLBoolean status;
 
-    /* Check if OpenGL ES connection has been initialized */
+    if (phdata->egl_initialized != SDL_TRUE) {
+        SDL_SetError("PSL1GHT: GL initialization failed, no OpenGL support");
+        return;
+    }
+
+    /* Check if OpenGL connection has been initialized */
     if (_this->gl_data->display != EGL_NO_DISPLAY) {
         if (context != EGL_NO_CONTEXT) {
             status = eglDestroyContext(_this->gl_data->display, context);
             if (status != EGL_TRUE) {
-                /* Error during OpenGL ES context destroying */
-                SDL_SetError("PSP: OpenGL ES context destroy error");
+                /* Error during OpenGL context destroying */
+                SDL_SetError("PSL1GHT: OpenGL context destroy error");
                 return;
             }
         }
@@ -185,6 +190,6 @@ void PSP_GL_DeleteContext(_THIS, SDL_GLContext context)
     return;
 }
 
-#endif /* SDL_VIDEO_DRIVER_PSP */
+#endif /* SDL_VIDEO_DRIVER_PSL1GHT */
 
 /* vi: set ts=4 sw=4 expandtab: */

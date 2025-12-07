@@ -25,6 +25,7 @@
 #define _SDL_PSL1GHTvideo_h
 
 #include "../SDL_sysvideo.h"
+#include "SDL_PSL1GHTgl_c.h"
 
 #include <rsx/rsx.h>
 #include <sysutil/video_out.h>
@@ -64,6 +65,12 @@ typedef struct SDL_DeviceData
     Uint8 _mouseButtons;
 } SDL_DeviceData;
 
+typedef struct SDL_VideoData
+{
+    SDL_bool egl_initialized; /* OpenGL device initialization status */
+    uint32_t egl_refcount;    /* OpenGL reference count              */
+} SDL_VideoData;
+
 typedef struct SDL_DisplayModeData
 {
     videoOutConfiguration vconfig;
@@ -73,6 +80,18 @@ typedef struct SDL_WindowData
 {
 
 } SDL_WindowData;
+
+#ifdef SDL_VIDEO_OPENGL
+int PSL1GHT_GL_LoadLibrary(_THIS, const char *path);
+void *PSL1GHT_GL_GetProcAddress(_THIS, const char *proc);
+void PSL1GHT_GL_UnloadLibrary(_THIS);
+SDL_GLContext PSL1GHT_GL_CreateContext(_THIS, SDL_Window *window);
+int PSL1GHT_GL_MakeCurrent(_THIS, SDL_Window *window, SDL_GLContext context);
+int PSL1GHT_GL_SetSwapInterval(_THIS, int interval);
+int PSL1GHT_GL_GetSwapInterval(_THIS);
+int PSL1GHT_GL_SwapWindow(_THIS, SDL_Window *window);
+void PSL1GHT_GL_DeleteContext(_THIS, SDL_GLContext context);
+#endif
 
 #endif /* _SDL_PSL1GHTvideo_h */
 
