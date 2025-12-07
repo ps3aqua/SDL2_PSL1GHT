@@ -64,16 +64,28 @@ SDL_GetTicks64(void)
     return ticks;
 }
 
-Uint64
+Uint64 
 SDL_GetPerformanceCounter(void)
 {
-    return SDL_GetTicks();
+    if (!ticks_started) {
+        SDL_TicksInit();
+    }
+
+    struct timeval now;
+    Uint64 ticks;
+
+    gettimeofday(&now, NULL);
+    ticks = now.tv_sec;
+    ticks *= 1000000;
+    ticks += now.tv_usec;
+    
+    return ticks;
 }
 
-Uint64
+Uint64 
 SDL_GetPerformanceFrequency(void)
 {
-    return 1000;
+    return 1000000;
 }
 
 void
